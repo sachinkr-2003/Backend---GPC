@@ -1,0 +1,11 @@
+# Uploads Directory
+
+This directory stores uploaded files like property documents, images, and generated reports.
+
+Files uploaded here:
+- Property documents (PDF, DOC, DOCX)
+- Property images (JPG, PNG)
+- Generated verification reports
+- Export files (CSV, Excel)
+
+Note: This directory is ignored in git except for this placeholder file.
