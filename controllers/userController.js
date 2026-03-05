@@ -5,7 +5,7 @@ const { validationResult } = require('express-validator');
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find().sort({ createdAt: -1 });
-    
+
     res.json({
       success: true,
       count: users.length,
@@ -72,7 +72,7 @@ exports.createUser = async (req, res) => {
         message: 'User with this phone number already exists'
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: 'Server Error',

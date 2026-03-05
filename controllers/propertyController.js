@@ -10,7 +10,7 @@ exports.getAllRequests = async (req, res) => {
       .populate('user', 'name email phone')
       .populate('assignedTo', 'username')
       .sort({ createdAt: -1 });
-    
+
     res.json({
       success: true,
       count: requests.length,
@@ -37,7 +37,15 @@ exports.createRequest = async (req, res) => {
       });
     }
 
-    const { name, email, phone, address, propertyAddress, propertyType, serviceType } = req.body;
+    let { name, email, phone, address, propertyAddress, propertyType, serviceType } = req.body;
+
+    // Normalize phone number (Remove non-digits and take last 10 digits)
+    const normalizedPhone = phone.replace(/\D/g, '').slice(-10);
+    phone = `+91${normalizedPhone}`; // Standardize to +91 format
+
+    if (!email || email.trim() === '') {
+      email = undefined;
+    }
 
     // Create or find user
     let user = await User.findOne({ phone });
@@ -85,6 +93,7 @@ exports.createRequest = async (req, res) => {
       data: propertyRequest
     });
   } catch (error) {
+    require('fs').appendFileSync(require('path').join(__dirname, '../../tmp_error_log.txt'), '\\n[' + new Date().toISOString() + '] ' + error.stack + '\\n');
     res.status(500).json({
       success: false,
       message: 'Server Error',

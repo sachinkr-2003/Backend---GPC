@@ -53,4 +53,4 @@ const propertyRequestSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('PropertyRequest', propertyRequestSchema, 'gorakhpur_property_check.property_requests');
+module.exports = mongoose.model('PropertyRequest', propertyRequestSchema, 'property_requests');

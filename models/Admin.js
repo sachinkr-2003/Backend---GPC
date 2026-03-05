@@ -42,4 +42,4 @@ adminSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('Admin', adminSchema, 'gorakhpur_property_check.admins');
+module.exports = mongoose.model('Admin', adminSchema, 'admins');

@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     unique: true,
+    sparse: true,
     lowercase: true,
     trim: true
   },
@@ -30,4 +31,4 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('User', userSchema, 'gorakhpur_property_check.users');
+module.exports = mongoose.model('User', userSchema, 'users');

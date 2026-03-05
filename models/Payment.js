@@ -34,4 +34,4 @@ const paymentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Payment', paymentSchema, 'gorakhpur_property_check.payments');
+module.exports = mongoose.model('Payment', paymentSchema, 'payments');

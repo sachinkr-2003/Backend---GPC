@@ -1,1 +1,63 @@
-const express = require('express');\nconst router = express.Router();\nconst upload = require('../middleware/upload');\nconst auth = require('../middleware/auth');\nconst path = require('path');\n\n// Upload documents\nrouter.post('/documents', auth, upload.array('documents', 10), (req, res) => {\n  try {\n    if (!req.files || req.files.length === 0) {\n      return res.status(400).json({\n        success: false,\n        message: 'No files uploaded'\n      });\n    }\n\n    const uploadedFiles = req.files.map(file => ({\n      filename: file.filename,\n      originalName: file.originalname,\n      path: file.path,\n      size: file.size,\n      mimetype: file.mimetype,\n      uploadedAt: new Date()\n    }));\n\n    res.json({\n      success: true,\n      message: 'Files uploaded successfully',\n      data: uploadedFiles\n    });\n  } catch (error) {\n    res.status(500).json({\n      success: false,\n      message: 'Upload failed',\n      error: error.message\n    });\n  }\n});\n\n// Get uploaded file\nrouter.get('/files/:filename', (req, res) => {\n  try {\n    const filename = req.params.filename;\n    const filePath = path.join(__dirname, '../uploads', filename);\n    \n    res.sendFile(filePath, (err) => {\n      if (err) {\n        res.status(404).json({\n          success: false,\n          message: 'File not found'\n        });\n      }\n    });\n  } catch (error) {\n    res.status(500).json({\n      success: false,\n      message: 'Error retrieving file',\n      error: error.message\n    });\n  }\n});\n\nmodule.exports = router;
+const express = require('express');
+const router = express.Router();
+const upload = require('../middleware/upload');
+const auth = require('../middleware/auth');
+const path = require('path');
+
+// Upload documents
+router.post('/documents', auth, upload.array('documents', 10), (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No files uploaded'
+            });
+        }
+
+        const uploadedFiles = req.files.map(file => ({
+            filename: file.filename,
+            originalName: file.originalname,
+            path: file.path,
+            size: file.size,
+            mimetype: file.mimetype,
+            uploadedAt: new Date()
+        }));
+
+        res.json({
+            success: true,
+            message: 'Files uploaded successfully',
+            data: uploadedFiles
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Upload failed',
+            error: error.message
+        });
+    }
+});
+
+// Get uploaded file
+router.get('/files/:filename', (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const filePath = path.join(__dirname, '../uploads', filename);
+
+        res.sendFile(filePath, (err) => {
+            if (err) {
+                res.status(404).json({
+                    success: false,
+                    message: 'File not found'
+                });
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error retrieving file',
+            error: error.message
+        });
+    }
+});
+
+module.exports = router;

@@ -4,12 +4,16 @@ const Admin = require('./models/Admin');
 const User = require('./models/User');
 const PropertyRequest = require('./models/PropertyRequest');
 
+// Load environment variables
+require('dotenv').config();
+
 // Database initialization script
 const initializeDatabase = async () => {
   try {
+    const dbUrl = process.env.MONGODB_URI || 'mongodb://localhost:27017/GPC';
     // Connect to MongoDB
-    await mongoose.connect('mongodb://localhost:27017/GPC');
-    console.log('✅ Connected to MongoDB - GPC Database');
+    await mongoose.connect(dbUrl);
+    console.log(`✅ Connected to MongoDB - ${dbUrl.includes('localhost') ? 'Local GPC' : 'Remote'} Database`);
 
     // Clear existing data (optional)
     // await Admin.deleteMany({});
@@ -40,7 +44,7 @@ const initializeDatabase = async () => {
       },
       {
         name: 'Priya Singh',
-        email: 'priya@email.com', 
+        email: 'priya@email.com',
         phone: '9876543211',
         address: 'Muzaffarpur, Bihar',
         status: 'Active'
@@ -76,7 +80,7 @@ const initializeDatabase = async () => {
           user: user2._id,
           propertyAddress: 'Shop No. 45, Bank Road, Gorakhpur, UP',
           propertyType: 'Commercial',
-          serviceType: 'Basic', 
+          serviceType: 'Basic',
           status: 'In Progress',
           amount: 3000,
           paymentStatus: 'Paid',
@@ -85,8 +89,8 @@ const initializeDatabase = async () => {
       ];
 
       for (const requestData of requests) {
-        const requestExists = await PropertyRequest.findOne({ 
-          propertyAddress: requestData.propertyAddress 
+        const requestExists = await PropertyRequest.findOne({
+          propertyAddress: requestData.propertyAddress
         });
         if (!requestExists) {
           const request = new PropertyRequest(requestData);
@@ -100,7 +104,7 @@ const initializeDatabase = async () => {
     console.log('📋 Login credentials:');
     console.log('   Username: admin');
     console.log('   Password: admin123');
-    
+
     process.exit(0);
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
