@@ -2,6 +2,7 @@ const PropertyRequest = require('../models/PropertyRequest');
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
 const emailService = require('../services/emailService');
+const smsService = require('../services/smsService');
 
 // Get all property requests
 exports.getAllRequests = async (req, res) => {
@@ -11,17 +12,9 @@ exports.getAllRequests = async (req, res) => {
       .populate('assignedTo', 'username')
       .sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      count: requests.length,
-      data: requests
-    });
+    res.json({ success: true, count: requests.length, data: requests });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 
@@ -30,49 +23,44 @@ exports.createRequest = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation Error',
-        errors: errors.array()
-      });
+      return res.status(400).json({ success: false, message: 'Validation Error', errors: errors.array() });
     }
 
     let { name, email, phone, address, propertyAddress, propertyType, serviceType } = req.body;
 
-    // Normalize phone number (Remove non-digits and take last 10 digits)
     const normalizedPhone = phone.replace(/\D/g, '').slice(-10);
-    phone = `+91${normalizedPhone}`; // Standardize to +91 format
+    phone = `+91${normalizedPhone}`;
 
-    if (!email || email.trim() === '') {
-      email = undefined;
-    }
+    if (!email || email.trim() === '') email = undefined;
 
-    // Create or find user
     let user = await User.findOne({ phone });
     if (!user) {
       user = new User({ name, email, phone, address });
       await user.save();
     }
 
-    // Calculate amount based on service type
-    const pricing = {
-      'Basic': 3000,
-      'Complete': 5000,
-      'Premium': 8000
-    };
+    const pricing = { 'Basic': 3000, 'Complete': 5000, 'Premium': 8000 };
+
+    // Attach uploaded documents if any
+    const documents = req.files ? req.files.map(file => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      path: file.path,
+      uploadedAt: new Date()
+    })) : [];
 
     const propertyRequest = new PropertyRequest({
       user: user._id,
       propertyAddress,
       propertyType,
       serviceType,
-      amount: pricing[serviceType]
+      amount: pricing[serviceType],
+      documents
     });
 
     await propertyRequest.save();
     await propertyRequest.populate('user', 'name email phone');
 
-    // Send confirmation email
     if (email) {
       await emailService.sendRequestConfirmation(email, {
         name,
@@ -84,8 +72,8 @@ exports.createRequest = async (req, res) => {
       });
     }
 
-    // Send admin notification
     await emailService.sendAdminNotification(propertyRequest);
+    await smsService.sendRequestConfirmationSMS(phone, { name, _id: propertyRequest._id, amount: propertyRequest.amount });
 
     res.status(201).json({
       success: true,
@@ -93,12 +81,7 @@ exports.createRequest = async (req, res) => {
       data: propertyRequest
     });
   } catch (error) {
-    require('fs').appendFileSync(require('path').join(__dirname, '../../tmp_error_log.txt'), '\\n[' + new Date().toISOString() + '] ' + error.stack + '\\n');
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 
@@ -107,55 +90,71 @@ exports.getRequest = async (req, res) => {
   try {
     const request = await PropertyRequest.findById(req.params.id)
       .populate('user', 'name email phone address')
-      .populate('assignedTo', 'username');
+      .populate('assignedTo', 'username')
+      .populate('verificationReport');
 
     if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: 'Property request not found'
-      });
+      return res.status(404).json({ success: false, message: 'Property request not found' });
     }
 
-    res.json({
-      success: true,
-      data: request
-    });
+    res.json({ success: true, data: request });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 
-// Update property request
+// Update property request (with status change notifications)
 exports.updateRequest = async (req, res) => {
   try {
+    const oldRequest = await PropertyRequest.findById(req.params.id).populate('user', 'name email phone');
+    if (!oldRequest) {
+      return res.status(404).json({ success: false, message: 'Property request not found' });
+    }
+
     const request = await PropertyRequest.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
     ).populate('user', 'name email phone');
 
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: 'Property request not found'
-      });
+    // Send notification if status changed
+    if (req.body.status && req.body.status !== oldRequest.status) {
+      const user = request.user;
+      if (user.email) {
+        await emailService.sendStatusUpdate(user.email, {
+          name: user.name,
+          _id: request._id,
+          propertyAddress: request.propertyAddress,
+          status: request.status,
+          serviceType: request.serviceType
+        });
+      }
+      await smsService.sendStatusUpdateSMS(user.phone, { _id: request._id, status: request.status });
     }
 
-    res.json({
-      success: true,
-      message: 'Property request updated successfully',
-      data: request
-    });
+    res.json({ success: true, message: 'Property request updated successfully', data: request });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
+// Assign request to admin
+exports.assignRequest = async (req, res) => {
+  try {
+    const { adminId } = req.body;
+    const request = await PropertyRequest.findByIdAndUpdate(
+      req.params.id,
+      { assignedTo: adminId },
+      { new: true }
+    ).populate('user', 'name email phone').populate('assignedTo', 'username');
+
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Property request not found' });
+    }
+
+    res.json({ success: true, message: 'Request assigned successfully', data: request });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 
@@ -163,23 +162,11 @@ exports.updateRequest = async (req, res) => {
 exports.deleteRequest = async (req, res) => {
   try {
     const request = await PropertyRequest.findByIdAndDelete(req.params.id);
-
     if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: 'Property request not found'
-      });
+      return res.status(404).json({ success: false, message: 'Property request not found' });
     }
-
-    res.json({
-      success: true,
-      message: 'Property request deleted successfully'
-    });
+    res.json({ success: true, message: 'Property request deleted successfully' });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };

@@ -50,6 +50,65 @@ exports.sendRequestConfirmation = async (userEmail, requestData) => {
   }
 };
 
+// Send status update email to customer
+exports.sendStatusUpdate = async (userEmail, requestData) => {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: userEmail,
+      subject: `Property Request Status Updated - #${requestData._id}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1a365d;">Request Status Updated</h2>
+          <p>Dear ${requestData.name},</p>
+          <p>Your property verification request status has been updated.</p>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Request ID:</strong> #${requestData._id}</p>
+            <p><strong>Property:</strong> ${requestData.propertyAddress}</p>
+            <p><strong>Service:</strong> ${requestData.serviceType}</p>
+            <p><strong>New Status:</strong> <span style="color: #28a745; font-weight: bold;">${requestData.status}</span></p>
+          </div>
+          <p>For queries, contact: +91 9693420595</p>
+          <p>Best regards,<br><strong>Gorakhpur Property Check</strong></p>
+        </div>
+      `
+    };
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Status update email sent');
+  } catch (error) {
+    console.error('❌ Status update email failed:', error);
+  }
+};
+
+// Send verification report to customer
+exports.sendReportToCustomer = async (userEmail, reportData) => {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: userEmail,
+      subject: `Property Verification Report Ready - ${reportData.reportNumber}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1a365d;">Your Property Verification Report is Ready</h2>
+          <p>Dear ${reportData.name},</p>
+          <p>Your property verification report has been completed.</p>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Report Number:</strong> ${reportData.reportNumber}</p>
+            <p><strong>Property:</strong> ${reportData.propertyAddress}</p>
+            <p><strong>Recommendation:</strong> <span style="color: #28a745; font-weight: bold;">${reportData.recommendation}</span></p>
+          </div>
+          <p>Please find the detailed report attached or contact us for more information.</p>
+          <p>Best regards,<br><strong>Gorakhpur Property Check</strong><br>Phone: +91 9693420595</p>
+        </div>
+      `
+    };
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Report email sent to customer');
+  } catch (error) {
+    console.error('❌ Report email failed:', error);
+  }
+};
+
 // Send admin notification
 exports.sendAdminNotification = async (requestData) => {
   try {

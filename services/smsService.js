@@ -35,14 +35,12 @@ exports.sendSMS = async (phone, message) => {
 
 // Send request confirmation SMS
 exports.sendRequestConfirmationSMS = async (phone, requestData) => {
-  const message = `Dear ${requestData.name}, your property verification request #${requestData._id} has been received. Amount: ₹${requestData.amount}. We will contact you within 24 hours. - Gorakhpur Property Check`;
-  
-  return await this.sendSMS(phone, message);
+  const message = `Dear ${requestData.name}, your property verification request #${requestData._id} has been received. Amount: Rs.${requestData.amount}. We will contact you within 24 hours. - Gorakhpur Property Check`;
+  return await exports.sendSMS(phone, message);
 };
 
 // Send status update SMS
 exports.sendStatusUpdateSMS = async (phone, requestData) => {
   const message = `Your property verification request #${requestData._id} status has been updated to: ${requestData.status}. - Gorakhpur Property Check`;
-  
-  return await this.sendSMS(phone, message);
+  return await exports.sendSMS(phone, message);
 };

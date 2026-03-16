@@ -1,15 +1,33 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 
-// Load environment variables
 dotenv.config();
-
-// Connect to database
 connectDB();
 
 const app = express();
+
+// Security headers
+app.use(helmet());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: { success: false, message: 'Too many requests, please try again later.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Too many login attempts, please try again later.' }
+});
+
+app.use('/api/', limiter);
+app.use('/api/auth/login', authLimiter);
 
 // Middleware
 app.use(cors());
@@ -26,6 +44,7 @@ app.use('/api/upload', require('./routes/upload'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/services', require('./routes/services'));
 app.use('/api/testimonials', require('./routes/testimonials'));
+app.use('/api/reports', require('./routes/reports'));
 
 // Static files
 app.use('/uploads', express.static('uploads'));
