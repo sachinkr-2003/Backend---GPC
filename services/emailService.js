@@ -109,6 +109,31 @@ exports.sendReportToCustomer = async (userEmail, reportData) => {
   }
 };
 
+// Send contact form notification to admin
+exports.sendContactNotification = async (contactData) => {
+  try {
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: process.env.SMTP_USER,
+      subject: `New Contact Message from ${contactData.name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc3545;">New Contact Message</h2>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+            <p><strong>Name:</strong> ${contactData.name}</p>
+            <p><strong>Phone:</strong> ${contactData.phone}</p>
+            <p><strong>Email:</strong> ${contactData.email || 'N/A'}</p>
+            <p><strong>Message:</strong> ${contactData.message}</p>
+          </div>
+        </div>
+      `
+    };
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error('❌ Contact notification failed:', error);
+  }
+};
+
 // Send admin notification
 exports.sendAdminNotification = async (requestData) => {
   try {
